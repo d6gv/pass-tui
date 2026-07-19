@@ -7,7 +7,12 @@ from textual.app import App, ComposeResult
 from textual.screen import Screen
 from textual.widgets import Static
 
-from pass_tui.cli import PassCliError, fetch_session, run_pass_cli_interactive
+from pass_tui.cli import (
+    PassCliError,
+    fetch_session,
+    logout,
+    run_pass_cli_interactive,
+)
 from pass_tui.screens import HomeScreen, LoginScreen
 
 
@@ -60,6 +65,17 @@ class PassTuiApp(App[None]):
         """
         with self.suspend():
             return run_pass_cli_interactive("login")
+
+    @work(exclusive=True, group="session")
+    async def perform_logout(self) -> None:
+        """Log out via ``pass-cli logout`` and return to the login screen."""
+        try:
+            await logout()
+        except PassCliError as exc:
+            self.notify(str(exc), title="pass-cli", severity="error")
+            return
+        self.notify("Logged out.", title="pass-cli")
+        self._show_screen(LoginScreen())
 
     def _show_screen(self, screen: Screen[None]) -> None:
         """Route to ``screen``, replacing any current login/home screen.

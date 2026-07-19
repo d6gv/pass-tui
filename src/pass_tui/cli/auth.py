@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
-from pass_tui.cli.runner import PassCliError, run_pass_cli
+from pass_tui.cli.runner import PassCliError, run_pass_cli, run_pass_cli_checked
 
 
 class SessionInfo(BaseModel):
@@ -56,3 +56,12 @@ async def fetch_session() -> SessionInfo | None:
             "`pass-cli info` returned a JSON array; expected an object."
         )
     return SessionInfo.model_validate(data)
+
+
+async def logout() -> None:
+    """Log out the active session via ``pass-cli logout``.
+
+    Raises:
+        PassCliError: if the command fails.
+    """
+    await run_pass_cli_checked("logout")

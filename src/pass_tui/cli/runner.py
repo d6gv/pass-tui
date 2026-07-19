@@ -39,18 +39,14 @@ class PassCliError(RuntimeError):
         self.stderr = stderr
 
 
-async def run_pass_cli(*args: str) -> dict[str, Any] | list[Any]:
-    """Run ``pass-cli`` with ``args`` and return its stdout parsed as JSON.
+async def run_pass_cli_checked(*args: str) -> str:
+    """Run ``pass-cli`` with ``args`` and return its raw stdout as text.
 
-    Args:
-        *args: Arguments passed to the binary, e.g. ``"info", "--output", "json"``.
-
-    Returns:
-        The parsed JSON, which pass-cli emits as either an object or an array.
+    Output is captured but not parsed. Use this for commands such as
+    ``logout`` that succeed without emitting JSON.
 
     Raises:
-        PassCliError: if the binary is missing, exits non-zero, or emits output
-            that is not a JSON object or array.
+        PassCliError: if the binary is missing or exits non-zero.
     """
     command = [PASS_CLI_BINARY, *args]
     printable = " ".join(command)
@@ -81,23 +77,38 @@ async def run_pass_cli(*args: str) -> dict[str, Any] | list[Any]:
             stderr=stderr,
         )
 
+    return stdout
+
+
+async def run_pass_cli(*args: str) -> dict[str, Any] | list[Any]:
+    """Run ``pass-cli`` with ``args`` and return its stdout parsed as JSON.
+
+    Args:
+        *args: Arguments passed to the binary, e.g. ``"info", "--output", "json"``.
+
+    Returns:
+        The parsed JSON, which pass-cli emits as either an object or an array.
+
+    Raises:
+        PassCliError: if the binary is missing, exits non-zero, or emits output
+            that is not a JSON object or array.
+    """
+    stdout = await run_pass_cli_checked(*args)
+    printable = " ".join([PASS_CLI_BINARY, *args])
+
     try:
         data = json.loads(stdout)
     except json.JSONDecodeError as exc:
         raise PassCliError(
             f"`{printable}` did not return valid JSON: {exc}",
-            command=command,
-            returncode=process.returncode,
-            stderr=stderr,
+            command=[PASS_CLI_BINARY, *args],
         ) from exc
 
     if not isinstance(data, (dict, list)):
         raise PassCliError(
             f"`{printable}` returned JSON of type {type(data).__name__}, "
             "expected an object or an array.",
-            command=command,
-            returncode=process.returncode,
-            stderr=stderr,
+            command=[PASS_CLI_BINARY, *args],
         )
 
     return data
