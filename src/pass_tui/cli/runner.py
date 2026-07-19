@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import subprocess
 from typing import Any
 
 #: Name of the pass-cli executable. Resolved on the PATH by the OS.
@@ -100,3 +101,25 @@ async def run_pass_cli(*args: str) -> dict[str, Any] | list[Any]:
         )
 
     return data
+
+
+def run_pass_cli_interactive(*args: str) -> int:
+    """Run ``pass-cli`` with inherited stdio and return its exit code.
+
+    For interactive commands such as ``login`` that must own the terminal.
+    Call this only while the Textual app is suspended, so the terminal is free.
+    Unlike :func:`run_pass_cli`, output is neither captured nor parsed.
+
+    Raises:
+        PassCliError: if the binary is missing.
+    """
+    command = [PASS_CLI_BINARY, *args]
+    try:
+        completed = subprocess.run(command)
+    except FileNotFoundError as exc:
+        raise PassCliError(
+            f"Could not find the '{PASS_CLI_BINARY}' binary. Is pass-cli "
+            "installed and on your PATH?",
+            command=command,
+        ) from exc
+    return completed.returncode

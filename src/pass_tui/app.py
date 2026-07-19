@@ -7,7 +7,7 @@ from textual.app import App, ComposeResult
 from textual.screen import Screen
 from textual.widgets import Static
 
-from pass_tui.cli import PassCliError, fetch_session
+from pass_tui.cli import PassCliError, fetch_session, run_pass_cli_interactive
 from pass_tui.screens import HomeScreen, LoginScreen
 
 
@@ -35,6 +35,31 @@ class PassTuiApp(App[None]):
             self._show_screen(LoginScreen())
         else:
             self._show_screen(HomeScreen(session))
+
+    def perform_interactive_login(self) -> None:
+        """Suspend the TUI, run ``pass-cli login``, then re-check the session."""
+        try:
+            exit_code = self._suspend_and_login()
+        except PassCliError as exc:
+            self.notify(str(exc), title="pass-cli", severity="error")
+            return
+
+        if exit_code == 0:
+            self.check_session()
+        else:
+            self.notify(
+                "Login was cancelled or did not complete.",
+                title="pass-cli",
+                severity="warning",
+            )
+
+    def _suspend_and_login(self) -> int:
+        """Hand the terminal to ``pass-cli login`` while the TUI is suspended.
+
+        Isolated so tests can stub it without a real terminal or subprocess.
+        """
+        with self.suspend():
+            return run_pass_cli_interactive("login")
 
     def _show_screen(self, screen: Screen[None]) -> None:
         """Route to ``screen``, replacing any current login/home screen.
