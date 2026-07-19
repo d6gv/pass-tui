@@ -59,6 +59,10 @@ class LoginScreen(Screen[None]):
                 yield Static(self._error, id="login-error")
         yield Footer()
 
+    def on_mount(self) -> None:
+        # Clear any account label left in the header by a previous session.
+        self.app.sub_title = ""
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "login-button":
             self.action_login()

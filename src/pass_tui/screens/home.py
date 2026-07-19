@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from rich.markup import escape
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.screen import Screen
@@ -21,6 +22,11 @@ class HomeScreen(Screen[None]):
         width: auto;
         height: auto;
         padding: 1 2;
+        border: round $primary;
+    }
+    #home-title {
+        text-style: bold;
+        margin-bottom: 1;
     }
     """
 
@@ -32,7 +38,24 @@ class HomeScreen(Screen[None]):
         yield Header()
         with Vertical(id="home-box"):
             yield Static(
-                "You have an active Proton Pass session.",
+                f"Signed in as [b]{escape(self._session.account_label)}[/b]",
                 id="home-title",
             )
+            yield Static(self._details(), id="home-details")
         yield Footer()
+
+    def on_mount(self) -> None:
+        self.app.sub_title = self._session.account_label
+
+    def _details(self) -> str:
+        session = self._session
+        rows: list[str] = []
+        if session.email:
+            rows.append(f"Email:   {escape(session.email)}")
+        if session.username:
+            rows.append(f"User:    {escape(session.username)}")
+        if session.user_id:
+            rows.append(f"User ID: {escape(session.user_id)}")
+        if session.release_track:
+            rows.append(f"Track:   {escape(session.release_track)}")
+        return "\n".join(rows) if rows else "No account details available."
