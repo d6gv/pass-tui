@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import json
-
+from textual import work
 from textual.app import App, ComposeResult
-from textual.binding import Binding
-from textual.widgets import Footer, Header, Static
+from textual.screen import Screen
+from textual.widgets import Static
 
-from pass_tui.cli import PassCliError, run_pass_cli
+from pass_tui.cli import PassCliError, fetch_session
+from pass_tui.screens import HomeScreen, LoginScreen
 
 
 class PassTuiApp(App[None]):
@@ -16,30 +16,37 @@ class PassTuiApp(App[None]):
 
     TITLE = "pass-tui"
 
-    BINDINGS = [
-        Binding("ctrl+d", "debug_info", "Debug: pass-cli info", show=False),
-    ]
-
     def compose(self) -> ComposeResult:
-        yield Header()
-        yield Static(
-            "pass-tui — a Proton Pass terminal UI (placeholder)",
-            id="placeholder",
-        )
-        yield Footer()
+        yield Static("Checking for an active session…", id="loading")
 
-    async def action_debug_info(self) -> None:
-        """Hidden command: dump `pass-cli info` JSON through the runner.
+    def on_mount(self) -> None:
+        self.check_session()
 
-        Bound to ctrl+d. Proves the runner works from inside the app.
-        """
-        placeholder = self.query_one("#placeholder", Static)
+    @work(exclusive=True, group="session")
+    async def check_session(self) -> None:
+        """Detect an active pass-cli session and route to the right screen."""
         try:
-            data = await run_pass_cli("info", "--output", "json")
+            session = await fetch_session()
         except PassCliError as exc:
-            placeholder.update(f"pass-cli error:\n{exc}")
+            self._show_screen(LoginScreen(error=str(exc)))
             return
-        placeholder.update(json.dumps(data, indent=2))
+
+        if session is None:
+            self._show_screen(LoginScreen())
+        else:
+            self._show_screen(HomeScreen(session))
+
+    def _show_screen(self, screen: Screen[None]) -> None:
+        """Route to ``screen``, replacing any current login/home screen.
+
+        The first navigation happens over Textual's default screen, which
+        ``switch_screen`` cannot replace, so it is pushed; later transitions
+        swap the login/home screen in place.
+        """
+        if isinstance(self.screen, (LoginScreen, HomeScreen)):
+            self.switch_screen(screen)
+        else:
+            self.push_screen(screen)
 
 
 def main() -> None:
