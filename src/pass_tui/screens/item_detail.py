@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, cast
 from rich.markup import escape
 from textual import work
 from textual.app import ComposeResult
+from textual.binding import Binding
+from textual.coordinate import Coordinate
 from textual.widgets import DataTable, Static
 
 from pass_tui.cli import Item, ItemDetail, ItemField, PassCliError, Vault, get_item
@@ -21,6 +23,10 @@ MASK = "••••••••"
 
 class ItemDetailScreen(BackScreen):
     """Shows the fields of a single item, with sensitive values masked."""
+
+    BINDINGS = [
+        Binding("v", "toggle_reveal", "Reveal/hide"),
+    ]
 
     def __init__(self, item: Item, vault: Vault) -> None:
         super().__init__()
@@ -77,7 +83,32 @@ class ItemDetailScreen(BackScreen):
         note = self.query_one("#detail-note", Static)
         note.update(escape(detail.note) if detail.note else "")
 
+        # The reveal binding only makes sense when there is a secret to reveal.
+        self.refresh_bindings()
+
     def _display_value(self, field: ItemField) -> str:
         if field.sensitive and not self._revealed:
             return MASK
         return field.value or ""
+
+    def _has_secrets(self) -> bool:
+        return self._detail is not None and any(
+            field.sensitive for field in self._detail.fields
+        )
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool:
+        if action == "toggle_reveal":
+            return self._has_secrets()
+        return True
+
+    def action_toggle_reveal(self) -> None:
+        """Toggle masking of sensitive fields, preserving the cursor."""
+        if self._detail is None:
+            return
+        self._revealed = not self._revealed
+        table = self.query_one(DataTable)
+        for row, field in enumerate(self._detail.fields):
+            if field.sensitive:
+                table.update_cell_at(
+                    Coordinate(row, 1), self._display_value(field)
+                )
