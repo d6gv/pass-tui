@@ -16,7 +16,7 @@ import pass_tui.app as app_module
 from pass_tui.app import PassTuiApp
 from pass_tui.cli import SessionInfo
 from pass_tui.cli.runner import PassCliError
-from pass_tui.screens import HomeScreen, LoginScreen
+from pass_tui.screens import LoginScreen, VaultListScreen
 
 SESSION = SessionInfo(email="me@proton.me", username="me")
 
@@ -38,7 +38,7 @@ async def test_startup_without_session_shows_login(
         assert isinstance(app.screen, LoginScreen)
 
 
-async def test_startup_with_session_shows_home(
+async def test_startup_with_session_shows_vault_list(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
@@ -48,10 +48,8 @@ async def test_startup_with_session_shows_home(
     app = PassTuiApp()
     async with app.run_test() as pilot:
         await _settle(pilot)
-        assert isinstance(app.screen, HomeScreen)
+        assert isinstance(app.screen, VaultListScreen)
         assert app.sub_title == "me@proton.me"
-        details = str(app.screen.query_one("#home-details", Static).render())
-        assert "me@proton.me" in details
 
 
 async def test_startup_cli_error_shows_login_with_message(
@@ -89,7 +87,7 @@ async def test_login_success_transitions_to_home(
         assert isinstance(app.screen, LoginScreen)
         await pilot.press("l")
         await _settle(pilot)
-        assert isinstance(app.screen, HomeScreen)
+        assert isinstance(app.screen, VaultListScreen)
 
 
 async def test_login_failure_stays_on_login(
@@ -119,7 +117,7 @@ async def test_logout_transitions_back_to_login(
     app = PassTuiApp()
     async with app.run_test() as pilot:
         await _settle(pilot)
-        assert isinstance(app.screen, HomeScreen)
+        assert isinstance(app.screen, VaultListScreen)
         await pilot.press("ctrl+l")
         await _settle(pilot)
         assert isinstance(app.screen, LoginScreen)

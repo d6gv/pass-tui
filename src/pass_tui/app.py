@@ -13,7 +13,7 @@ from pass_tui.cli import (
     logout,
     run_pass_cli_interactive,
 )
-from pass_tui.screens import HomeScreen, LoginScreen
+from pass_tui.screens import LoginScreen, VaultListScreen
 
 
 class PassTuiApp(App[None]):
@@ -39,7 +39,7 @@ class PassTuiApp(App[None]):
         if session is None:
             self._show_screen(LoginScreen())
         else:
-            self._show_screen(HomeScreen(session))
+            self._show_screen(VaultListScreen(session))
 
     def perform_interactive_login(self) -> None:
         """Suspend the TUI, run ``pass-cli login``, then re-check the session."""
@@ -84,7 +84,7 @@ class PassTuiApp(App[None]):
         ``switch_screen`` cannot replace, so it is pushed; later transitions
         swap the login/home screen in place.
         """
-        if isinstance(self.screen, (LoginScreen, HomeScreen)):
+        if isinstance(self.screen, (LoginScreen, VaultListScreen)):
             self.switch_screen(screen)
         else:
             self.push_screen(screen)
