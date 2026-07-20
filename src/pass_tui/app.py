@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from textual import work
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.screen import Screen
 from textual.widgets import Static
 
@@ -13,7 +14,7 @@ from pass_tui.cli import (
     logout,
     run_pass_cli_interactive,
 )
-from pass_tui.screens import LoginScreen, VaultListScreen
+from pass_tui.screens import HelpScreen, LoginScreen, VaultListScreen
 
 
 class PassTuiApp(App[None]):
@@ -21,11 +22,21 @@ class PassTuiApp(App[None]):
 
     TITLE = "pass-tui"
 
+    BINDINGS = [
+        Binding("question_mark", "help", "Help"),
+    ]
+
     def compose(self) -> ComposeResult:
         yield Static("Checking for an active session…", id="loading")
 
     def on_mount(self) -> None:
         self.check_session()
+
+    def action_help(self) -> None:
+        """Open the keyboard-shortcuts help overlay."""
+        if isinstance(self.screen, HelpScreen):
+            return
+        self.push_screen(HelpScreen())
 
     @work(exclusive=True, group="session")
     async def check_session(self) -> None:
