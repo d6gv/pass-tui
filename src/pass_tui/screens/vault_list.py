@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.widgets import Static
+from textual.widgets import DataTable
 
-from pass_tui.cli import SessionInfo
+from pass_tui.cli import PassCliError, SessionInfo, Vault, list_vaults
 from pass_tui.screens.base import ChromeScreen
 from pass_tui.screens.item_list import ItemListScreen
 from pass_tui.screens.settings import SettingsScreen
@@ -21,7 +22,7 @@ class VaultListScreen(ChromeScreen):
     """Lists the user's vaults and is the root of the logged-in stack."""
 
     BINDINGS = [
-        Binding("enter", "open_items", "Open"),
+        Binding("r", "refresh", "Refresh"),
         Binding("s", "settings", "Settings"),
         Binding("ctrl+l", "logout", "Log out"),
     ]
@@ -29,18 +30,48 @@ class VaultListScreen(ChromeScreen):
     def __init__(self, session: SessionInfo) -> None:
         super().__init__()
         self._session = session
+        self._vaults_by_key: dict[str, Vault] = {}
 
     def compose_content(self) -> ComposeResult:
-        yield Static("Vaults will appear here.", id="vault-placeholder")
+        yield DataTable(id="vault-table", cursor_type="row", zebra_stripes=True)
 
     def on_mount(self) -> None:
         self.app.sub_title = self._session.account_label
+        table = self.query_one(DataTable)
+        table.add_columns("Vault", "Items", "Shared")
+        self.load_vaults()
 
-    def action_open_items(self) -> None:
-        self.app.push_screen(ItemListScreen())
+    @work(exclusive=True, group="vaults")
+    async def load_vaults(self) -> None:
+        """Fetch vaults from pass-cli and populate the table."""
+        try:
+            vaults = await list_vaults()
+        except PassCliError as exc:
+            self.notify(str(exc), title="pass-cli", severity="error")
+            return
+
+        table = self.query_one(DataTable)
+        table.clear()
+        self._vaults_by_key.clear()
+        for index, vault in enumerate(vaults):
+            key = vault.share_id or str(index)
+            self._vaults_by_key[key] = vault
+            table.add_row(
+                vault.display_name,
+                vault.item_count_display,
+                "yes" if vault.is_shared else "",
+                key=key,
+            )
+
+    def action_refresh(self) -> None:
+        self.load_vaults()
 
     def action_settings(self) -> None:
         self.app.push_screen(SettingsScreen())
 
     def action_logout(self) -> None:
         cast("PassTuiApp", self.app).perform_logout()
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        # The selected vault will drive the item list in a later phase.
+        self.app.push_screen(ItemListScreen())
