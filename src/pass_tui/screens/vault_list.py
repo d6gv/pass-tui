@@ -47,7 +47,9 @@ class VaultListScreen(ChromeScreen):
         try:
             vaults = await list_vaults()
         except PassCliError as exc:
-            self.notify(str(exc), title="pass-cli", severity="error")
+            cast("PassTuiApp", self.app).show_error(
+                str(exc), title="Could not load vaults"
+            )
             return
 
         table = self.query_one(DataTable)

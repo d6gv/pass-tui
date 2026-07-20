@@ -14,7 +14,7 @@ from pass_tui.cli import (
     logout,
     run_pass_cli_interactive,
 )
-from pass_tui.screens import HelpScreen, LoginScreen, VaultListScreen
+from pass_tui.screens import ErrorModal, HelpScreen, LoginScreen, VaultListScreen
 
 
 class PassTuiApp(App[None]):
@@ -38,6 +38,10 @@ class PassTuiApp(App[None]):
             return
         self.push_screen(HelpScreen())
 
+    def show_error(self, message: str, *, title: str = "Error") -> None:
+        """Surface a non-fatal error in a modal instead of crashing."""
+        self.push_screen(ErrorModal(message, title=title))
+
     @work(exclusive=True, group="session")
     async def check_session(self) -> None:
         """Detect an active pass-cli session and route to the right screen."""
@@ -57,7 +61,7 @@ class PassTuiApp(App[None]):
         try:
             exit_code = self._suspend_and_login()
         except PassCliError as exc:
-            self.notify(str(exc), title="pass-cli", severity="error")
+            self.show_error(str(exc), title="Login failed")
             return
 
         if exit_code == 0:
@@ -83,7 +87,7 @@ class PassTuiApp(App[None]):
         try:
             await logout()
         except PassCliError as exc:
-            self.notify(str(exc), title="pass-cli", severity="error")
+            self.show_error(str(exc), title="Logout failed")
             return
         self.notify("Logged out.", title="pass-cli")
         self._show_screen(LoginScreen())

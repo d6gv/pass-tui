@@ -13,12 +13,21 @@ from textual.pilot import Pilot
 from textual.widgets import Static
 
 import pass_tui.app as app_module
+import pass_tui.screens.vault_list as vault_list_module
 from pass_tui.app import PassTuiApp
 from pass_tui.cli import SessionInfo
 from pass_tui.cli.runner import PassCliError
 from pass_tui.screens import LoginScreen, VaultListScreen
 
 SESSION = SessionInfo(email="me@proton.me", username="me")
+
+
+@pytest.fixture(autouse=True)
+def _stub_vault_list(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the vault list empty so reaching it never hits the real CLI."""
+    monkeypatch.setattr(
+        vault_list_module, "list_vaults", AsyncMock(return_value=[])
+    )
 
 
 async def _settle(pilot: Pilot[None]) -> None:
