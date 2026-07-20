@@ -75,5 +75,9 @@ class VaultListScreen(ChromeScreen):
         cast("PassTuiApp", self.app).perform_logout()
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        # The selected vault will drive the item list in a later phase.
-        self.app.push_screen(ItemListScreen())
+        key = event.row_key.value
+        if key is None:
+            return
+        vault = self._vaults_by_key.get(key)
+        if vault is not None:
+            self.app.push_screen(ItemListScreen(vault))
