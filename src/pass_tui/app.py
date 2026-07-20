@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import pyperclip
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
+from textual.timer import Timer
 from textual.widgets import Static
 
 from pass_tui.cli import (
@@ -26,11 +28,59 @@ class PassTuiApp(App[None]):
         Binding("question_mark", "help", "Help"),
     ]
 
+    #: Seconds before a copied secret is cleared from the clipboard.
+    #: Configurable; will be sourced from config.py in a later phase.
+    clipboard_clear_seconds: int = 15
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._clip_timer: Timer | None = None
+        self._clip_value: str | None = None
+
     def compose(self) -> ComposeResult:
         yield Static("Checking for an active session…", id="loading")
 
     def on_mount(self) -> None:
         self.check_session()
+
+    def copy_with_autoclear(self, value: str, *, label: str) -> bool:
+        """Copy ``value`` and schedule it to be cleared after the timeout.
+
+        Returns ``True`` on success. The clear timer lives on the app so the
+        clipboard is wiped even if the user navigates away from the item.
+        """
+        try:
+            pyperclip.copy(value)
+        except pyperclip.PyperclipException as exc:
+            self.show_error(str(exc), title="Clipboard unavailable")
+            return False
+
+        self._clip_value = value
+        if self._clip_timer is not None:
+            self._clip_timer.stop()
+        self._clip_timer = self.set_timer(
+            self.clipboard_clear_seconds, self._clear_clipboard
+        )
+        self.notify(
+            f"Copied {label}; clipboard clears in "
+            f"{self.clipboard_clear_seconds}s.",
+            title="Clipboard",
+        )
+        return True
+
+    def _clear_clipboard(self) -> None:
+        """Clear the clipboard, but only if it still holds the copied value."""
+        self._clip_timer = None
+        value = self._clip_value
+        self._clip_value = None
+        if value is None:
+            return
+        try:
+            if pyperclip.paste() == value:
+                pyperclip.copy("")
+        except pyperclip.PyperclipException:
+            pass
+        self.notify("Clipboard cleared.", title="Clipboard")
 
     def action_help(self) -> None:
         """Open the keyboard-shortcuts help overlay."""
