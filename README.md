@@ -43,12 +43,25 @@ pinned in `uv.lock`.
 uv run pass-tui
 ```
 
-While the app is running:
+On startup pass-tui checks for an active `pass-cli` session. If there is
+none, it shows the login screen; otherwise it lands on the vault list.
 
-- `ctrl+d` — hidden debug command: dumps the JSON of `pass-cli info` (or a
-  readable error if `pass-cli` is missing or you are not logged in) through
-  the runner. Useful for confirming the CLI wiring works.
-- `ctrl+c` — quit.
+Keyboard shortcuts (also shown in the footer, and under `?`):
+
+| Key      | Where       | Action                          |
+| -------- | ----------- | ------------------------------- |
+| `l`      | Login       | Log in (hands off to pass-cli)  |
+| `↑` `↓`  | Vault list  | Move between vaults             |
+| `enter`  | Vault list  | Open the selected vault         |
+| `r`      | Vault list  | Refresh the vault list          |
+| `s`      | Vault list  | Open settings                   |
+| `ctrl+l` | Vault list  | Log out                         |
+| `esc`    | Pushed view | Go back                         |
+| `?`      | Anywhere    | Toggle the help overlay         |
+| `ctrl+c` | Anywhere    | Quit                            |
+
+A pass-cli failure (e.g. no network) is shown in a dismissable error modal
+rather than crashing the app.
 
 ## Development
 
@@ -77,14 +90,26 @@ uv run mypy .        # type-check (strict)
 
 ```
 src/pass_tui/
-  app.py            # main Textual App
-  cli/              # invokes pass-cli and parses its JSON output
-    runner.py       # run_pass_cli(*args) -> dict | list, raises PassCliError
-  screens/          # Textual screens (added in later phases)
-  widgets/          # reusable custom widgets (added in later phases)
-  config.py         # config file handling (added in later phases)
-tests/
+  app.py              # main Textual App: session routing and navigation
+  cli/                # invokes pass-cli and parses its JSON output
+    runner.py         # run_pass_cli(*args) -> dict | list, raises PassCliError
+    auth.py           # SessionInfo, fetch_session(), logout()
+    vault.py          # Vault model and list_vaults()
+  screens/            # Textual screens
+    base.py           # shared header/footer chrome (ChromeScreen, BackScreen)
+    login.py          # login screen
+    vault_list.py     # vault list (landing screen once logged in)
+    item_list.py      # items in a vault (skeleton)
+    item_detail.py    # single item fields (skeleton)
+    forms.py          # create/edit form (skeleton)
+    settings.py       # settings (skeleton)
+    help.py           # help overlay (?)
+    error.py          # non-fatal error modal
+tests/                # pytest + Textual Pilot; pass-cli is always mocked
 ```
+
+`widgets/` (reusable custom widgets) and `config.py` (config file handling)
+will be added in later phases.
 
 ## License
 
