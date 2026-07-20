@@ -112,5 +112,9 @@ class ItemListScreen(BackScreen):
             event.stop()
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        # The selected item will drive the detail view in a later step.
-        self.app.push_screen(ItemDetailScreen())
+        key = event.row_key.value
+        if key is None:
+            return
+        item = self._items_by_key.get(key)
+        if item is not None:
+            self.app.push_screen(ItemDetailScreen(item, self._vault))
