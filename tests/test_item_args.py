@@ -14,6 +14,8 @@ from pass_tui.cli.item import (
     build_create_card_args,
     build_create_login_args,
     build_create_note_args,
+    build_create_ssh_key_generate_args,
+    build_create_ssh_key_import_args,
     build_update_args,
     create_login_item,
     delete_item,
@@ -77,6 +79,26 @@ def test_build_create_note_and_card_args() -> None:
         "--number", "4111",
         "--expiry", "2029-12",
         "--cvv", "123",
+        "--vault-name", "P",
+    ]  # fmt: skip
+
+
+def test_build_ssh_key_generate_and_import_args() -> None:
+    assert build_create_ssh_key_generate_args(
+        title="k", key_type="rsa4096", comment="laptop", share_id="s1"
+    ) == [
+        "item", "create", "ssh-key", "generate",
+        "--title", "k",
+        "--key-type", "rsa4096",
+        "--comment", "laptop",
+        "--share-id", "s1",
+    ]  # fmt: skip
+    assert build_create_ssh_key_import_args(
+        title="k", private_key_path="/tmp/id_ed25519", vault_name="P"
+    ) == [
+        "item", "create", "ssh-key", "import",
+        "--title", "k",
+        "--from-private-key", "/tmp/id_ed25519",
         "--vault-name", "P",
     ]  # fmt: skip
 
