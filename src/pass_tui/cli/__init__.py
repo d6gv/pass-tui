@@ -30,6 +30,13 @@ from pass_tui.cli.runner import (
     run_pass_cli_checked,
     run_pass_cli_interactive,
 )
+from pass_tui.cli.settings import (
+    OUTPUT_FORMATS,
+    SETTING_DEFAULT_FORMAT,
+    SETTING_DEFAULT_VAULT,
+    get_setting,
+    set_setting,
+)
 from pass_tui.cli.ssh_agent import (
     SshLoadSummary,
     parse_ssh_load_summary,
@@ -45,7 +52,10 @@ from pass_tui.cli.totp import (
 from pass_tui.cli.vault import Vault, list_vaults
 
 __all__ = [
+    "OUTPUT_FORMATS",
     "PASS_CLI_BINARY",
+    "SETTING_DEFAULT_FORMAT",
+    "SETTING_DEFAULT_VAULT",
     "SSH_KEY_TYPES",
     "TOTP_PERIOD",
     "Item",
@@ -69,6 +79,7 @@ __all__ = [
     "delete_item",
     "fetch_session",
     "get_item",
+    "get_setting",
     "get_totp_codes",
     "list_items",
     "list_vaults",
@@ -77,6 +88,7 @@ __all__ = [
     "parse_ssh_load_summary",
     "period_index",
     "seconds_remaining",
+    "set_setting",
     "ssh_agent_debug",
     "ssh_agent_load",
     "update_item_fields",
