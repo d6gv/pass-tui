@@ -11,8 +11,13 @@ from textual.widgets import DataTable, Input, Static
 
 from pass_tui.cli import Item, PassCliError, Vault, list_items
 from pass_tui.screens.base import BackScreen
-from pass_tui.screens.forms import LoginFormScreen
+from pass_tui.screens.forms import (
+    CardFormScreen,
+    LoginFormScreen,
+    NoteFormScreen,
+)
 from pass_tui.screens.item_detail import ItemDetailScreen
+from pass_tui.screens.new_item import NewItemModal
 
 if TYPE_CHECKING:
     from pass_tui.app import PassTuiApp
@@ -102,7 +107,15 @@ class ItemListScreen(BackScreen):
         self.load_items()
 
     def action_new(self) -> None:
-        self.app.push_screen(LoginFormScreen(self._vault))
+        def on_kind(kind: str | None) -> None:
+            if kind == "login":
+                self.app.push_screen(LoginFormScreen(self._vault))
+            elif kind == "note":
+                self.app.push_screen(NoteFormScreen(self._vault))
+            elif kind == "card":
+                self.app.push_screen(CardFormScreen(self._vault))
+
+        self.app.push_screen(NewItemModal(), on_kind)
 
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id == "item-filter":

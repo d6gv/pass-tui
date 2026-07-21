@@ -8,13 +8,15 @@ from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import VerticalScroll
-from textual.widgets import Button, Input, Label, Static
+from textual.widgets import Button, Input, Label, Static, TextArea
 
 from pass_tui.cli import (
     Item,
     PassCliError,
     Vault,
+    create_card_item,
     create_login_item,
+    create_note_item,
     update_item_fields,
 )
 from pass_tui.screens.base import BackScreen
@@ -155,4 +157,131 @@ class LoginFormScreen(BackScreen):
             )
             return
         self.notify("Login item updated.", title="pass-tui")
+        self.dismiss()
+
+
+class NoteFormScreen(BackScreen):
+    """Form for creating a note item in a vault."""
+
+    BINDINGS = [
+        Binding("ctrl+s", "submit", "Save"),
+    ]
+
+    def __init__(self, vault: Vault) -> None:
+        super().__init__()
+        self._vault = vault
+
+    def compose_content(self) -> ComposeResult:
+        with VerticalScroll(id="form-box"):
+            yield Static("New note item", id="form-title")
+            yield Label("Title")
+            yield Input(id="n-title")
+            yield Label("Note")
+            yield TextArea(id="n-note")
+            yield Button("Save", id="form-save", variant="primary")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "form-save":
+            self.action_submit()
+
+    def action_submit(self) -> None:
+        title = self.query_one("#n-title", Input).value.strip()
+        if not title:
+            self.notify("Title is required.", severity="warning")
+            return
+        self.create_item(title, self.query_one("#n-note", TextArea).text)
+
+    @work(exclusive=True, group="form")
+    async def create_item(self, title: str, note: str) -> None:
+        try:
+            await create_note_item(
+                title=title,
+                note=note,
+                vault_name=self._vault.name,
+                share_id=self._vault.share_id,
+            )
+        except PassCliError as exc:
+            cast("PassTuiApp", self.app).show_error(
+                str(exc), title="Could not create item"
+            )
+            return
+        self.notify("Note item created.", title="pass-tui")
+        self.dismiss()
+
+
+class CardFormScreen(BackScreen):
+    """Form for creating a card item in a vault."""
+
+    BINDINGS = [
+        Binding("ctrl+s", "submit", "Save"),
+    ]
+
+    def __init__(self, vault: Vault) -> None:
+        super().__init__()
+        self._vault = vault
+
+    def compose_content(self) -> ComposeResult:
+        with VerticalScroll(id="form-box"):
+            yield Static("New card item", id="form-title")
+            yield Label("Title")
+            yield Input(id="c-title")
+            yield Label("Cardholder name")
+            yield Input(id="c-cardholder")
+            yield Label("Card number")
+            yield Input(id="c-number")
+            yield Label("Expiry (YYYY-MM)")
+            yield Input(id="c-expiry", placeholder="2029-12")
+            yield Label("CVV")
+            yield Input(id="c-cvv", password=True)
+            yield Label("PIN")
+            yield Input(id="c-pin", password=True)
+            yield Label("Note")
+            yield Input(id="c-note")
+            yield Button("Save", id="form-save", variant="primary")
+
+    def _gather(self) -> dict[str, str]:
+        def value(field_id: str) -> str:
+            return self.query_one(field_id, Input).value
+
+        return {
+            "title": value("#c-title").strip(),
+            "cardholder": value("#c-cardholder"),
+            "number": value("#c-number"),
+            "expiry": value("#c-expiry"),
+            "cvv": value("#c-cvv"),
+            "pin": value("#c-pin"),
+            "note": value("#c-note"),
+        }
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "form-save":
+            self.action_submit()
+
+    def action_submit(self) -> None:
+        values = self._gather()
+        if not values["title"]:
+            self.notify("Title is required.", severity="warning")
+            return
+        self.create_item(values)
+
+    @work(exclusive=True, group="form")
+    async def create_item(self, values: dict[str, str]) -> None:
+        try:
+            await create_card_item(
+                title=values["title"],
+                cardholder=values["cardholder"],
+                number=values["number"],
+                expiry=values["expiry"],
+                cvv=values["cvv"],
+                pin=values["pin"],
+                note=values["note"],
+                vault_name=self._vault.name,
+                share_id=self._vault.share_id,
+            )
+        except PassCliError as exc:
+            cast("PassTuiApp", self.app).show_error(
+                str(exc), title="Could not create item"
+            )
+            return
+        self.notify("Card item created.", title="pass-tui")
         self.dismiss()

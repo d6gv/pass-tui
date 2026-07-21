@@ -234,6 +234,102 @@ async def create_login_item(
     await run_pass_cli_checked(*args)
 
 
+def build_create_note_args(
+    *,
+    title: str,
+    note: str = "",
+    vault_name: str | None = None,
+    share_id: str | None = None,
+) -> list[str]:
+    """Build the argv for ``pass-cli item create note``."""
+    args = ["item", "create", "note", "--title", title]
+    if note:
+        args += ["--note", note]
+    args += _vault_args(vault_name, share_id)
+    return args
+
+
+async def create_note_item(
+    *,
+    title: str,
+    note: str = "",
+    vault_name: str | None = None,
+    share_id: str | None = None,
+) -> None:
+    """Create a note item via ``pass-cli item create note``.
+
+    Raises:
+        PassCliError: if the command fails.
+    """
+    args = build_create_note_args(
+        title=title, note=note, vault_name=vault_name, share_id=share_id
+    )
+    await run_pass_cli_checked(*args)
+
+
+def build_create_card_args(
+    *,
+    title: str,
+    cardholder: str = "",
+    number: str = "",
+    expiry: str = "",
+    cvv: str = "",
+    pin: str = "",
+    note: str = "",
+    vault_name: str | None = None,
+    share_id: str | None = None,
+) -> list[str]:
+    """Build the argv for ``pass-cli item create card``.
+
+    Flag names are a best guess against an undocumented subcommand; ``expiry``
+    is expected in ``YYYY-MM`` form. Only non-empty fields are included.
+    """
+    args = ["item", "create", "card", "--title", title]
+    for flag, value in (
+        ("--cardholder-name", cardholder),
+        ("--number", number),
+        ("--expiry", expiry),
+        ("--cvv", cvv),
+        ("--pin", pin),
+        ("--note", note),
+    ):
+        if value:
+            args += [flag, value]
+    args += _vault_args(vault_name, share_id)
+    return args
+
+
+async def create_card_item(
+    *,
+    title: str,
+    cardholder: str = "",
+    number: str = "",
+    expiry: str = "",
+    cvv: str = "",
+    pin: str = "",
+    note: str = "",
+    vault_name: str | None = None,
+    share_id: str | None = None,
+) -> None:
+    """Create a card item via ``pass-cli item create card``.
+
+    Raises:
+        PassCliError: if the command fails.
+    """
+    args = build_create_card_args(
+        title=title,
+        cardholder=cardholder,
+        number=number,
+        expiry=expiry,
+        cvv=cvv,
+        pin=pin,
+        note=note,
+        vault_name=vault_name,
+        share_id=share_id,
+    )
+    await run_pass_cli_checked(*args)
+
+
 def build_update_args(
     *,
     fields: dict[str, str],
