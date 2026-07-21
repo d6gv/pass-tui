@@ -16,6 +16,7 @@ from pass_tui.cli import (
     logout,
     run_pass_cli_interactive,
 )
+from pass_tui.config import Config, load_config, save_config
 from pass_tui.screens import ErrorModal, HelpScreen, LoginScreen, VaultListScreen
 
 
@@ -29,19 +30,36 @@ class PassTuiApp(App[None]):
     ]
 
     #: Seconds before a copied secret is cleared from the clipboard.
-    #: Configurable; will be sourced from config.py in a later phase.
+    #: Sourced from the config file; see :attr:`config`.
     clipboard_clear_seconds: int = 15
 
     def __init__(self) -> None:
         super().__init__()
         self._clip_timer: Timer | None = None
         self._clip_value: str | None = None
+        self.config = load_config()
+        self.clipboard_clear_seconds = self.config.clipboard_clear_seconds
 
     def compose(self) -> ComposeResult:
         yield Static("Checking for an active session…", id="loading")
 
     def on_mount(self) -> None:
+        self._apply_theme()
         self.check_session()
+
+    def _apply_theme(self) -> None:
+        try:
+            self.theme = self.config.theme
+        except Exception:
+            # An unknown theme name in the config must not crash startup.
+            pass
+
+    def apply_config(self, config: Config) -> None:
+        """Adopt a new config at runtime and persist it."""
+        self.config = config
+        self.clipboard_clear_seconds = config.clipboard_clear_seconds
+        self._apply_theme()
+        save_config(config)
 
     def copy_with_autoclear(self, value: str, *, label: str) -> bool:
         """Copy ``value`` and schedule it to be cleared after the timeout.
