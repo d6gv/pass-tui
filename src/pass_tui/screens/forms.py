@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, cast
 
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import VerticalScroll
+from textual.validation import Function, Validator
 from textual.widgets import Button, Input, Label, Static, TextArea
 
 from pass_tui.cli import (
@@ -26,7 +28,48 @@ if TYPE_CHECKING:
     from pass_tui.app import PassTuiApp
 
 
-class LoginFormScreen(BackScreen):
+def required(message: str = "This field is required") -> Validator:
+    """A validator that rejects empty/whitespace-only values."""
+    return Function(lambda value: bool(value.strip()), message)
+
+
+def optional_pattern(pattern: str, message: str) -> Validator:
+    """A validator that accepts an empty value or a full regex match."""
+    regex = re.compile(pattern)
+    return Function(
+        lambda value: value == "" or regex.fullmatch(value) is not None,
+        message,
+    )
+
+
+class FormScreen(BackScreen):
+    """Base for item forms: save binding plus input validation."""
+
+    BINDINGS = [
+        Binding("ctrl+s", "submit", "Save"),
+    ]
+
+    def _check(self, *field_ids: str) -> bool:
+        """Validate the named inputs; notify and focus the first invalid one."""
+        first_invalid: Input | None = None
+        message = ""
+        for field_id in field_ids:
+            field = self.query_one(field_id, Input)
+            result = field.validate(field.value)
+            if result is not None and not result.is_valid and first_invalid is None:
+                first_invalid = field
+                message = result.failure_descriptions[0]
+        if first_invalid is not None:
+            self.notify(message, severity="warning")
+            first_invalid.focus()
+            return False
+        return True
+
+    def action_submit(self) -> None:  # pragma: no cover - overridden
+        raise NotImplementedError
+
+
+class LoginFormScreen(FormScreen):
     """Form for creating or editing a login item in a vault.
 
     Passing ``item`` switches the form to edit mode: fields are pre-filled from
@@ -34,10 +77,6 @@ class LoginFormScreen(BackScreen):
     In edit mode the password is left blank and only sent when the user types a
     new one, so the existing secret is not round-tripped or cleared by mistake.
     """
-
-    BINDINGS = [
-        Binding("ctrl+s", "submit", "Save"),
-    ]
 
     def __init__(
         self,
@@ -62,7 +101,11 @@ class LoginFormScreen(BackScreen):
                 id="form-title",
             )
             yield Label("Title")
-            yield Input(self._initial.get("title", ""), id="f-title")
+            yield Input(
+                self._initial.get("title", ""),
+                id="f-title",
+                validators=[required("Title is required")],
+            )
             yield Label("Username")
             yield Input(self._initial.get("username", ""), id="f-username")
             yield Label("Password")
@@ -75,7 +118,15 @@ class LoginFormScreen(BackScreen):
             )
             yield PasswordGenerator(id="f-password-generator")
             yield Label("URL")
-            yield Input(self._initial.get("url", ""), id="f-url")
+            yield Input(
+                self._initial.get("url", ""),
+                id="f-url",
+                validators=[
+                    optional_pattern(
+                        r"https?://\S+", "Enter a valid http(s) URL"
+                    )
+                ],
+            )
             yield Label("Note")
             yield Input(self._initial.get("note", ""), id="f-note")
             yield Button("Save", id="form-save", variant="primary")
@@ -102,10 +153,9 @@ class LoginFormScreen(BackScreen):
         self.query_one("#f-password", Input).value = event.password
 
     def action_submit(self) -> None:
-        values = self._gather()
-        if not values["title"]:
-            self.notify("Title is required.", severity="warning")
+        if not self._check("#f-title", "#f-url"):
             return
+        values = self._gather()
         if self._is_edit:
             self.update_item(values)
         else:
@@ -160,12 +210,8 @@ class LoginFormScreen(BackScreen):
         self.dismiss()
 
 
-class NoteFormScreen(BackScreen):
+class NoteFormScreen(FormScreen):
     """Form for creating a note item in a vault."""
-
-    BINDINGS = [
-        Binding("ctrl+s", "submit", "Save"),
-    ]
 
     def __init__(self, vault: Vault) -> None:
         super().__init__()
@@ -175,7 +221,7 @@ class NoteFormScreen(BackScreen):
         with VerticalScroll(id="form-box"):
             yield Static("New note item", id="form-title")
             yield Label("Title")
-            yield Input(id="n-title")
+            yield Input(id="n-title", validators=[required("Title is required")])
             yield Label("Note")
             yield TextArea(id="n-note")
             yield Button("Save", id="form-save", variant="primary")
@@ -185,10 +231,9 @@ class NoteFormScreen(BackScreen):
             self.action_submit()
 
     def action_submit(self) -> None:
-        title = self.query_one("#n-title", Input).value.strip()
-        if not title:
-            self.notify("Title is required.", severity="warning")
+        if not self._check("#n-title"):
             return
+        title = self.query_one("#n-title", Input).value.strip()
         self.create_item(title, self.query_one("#n-note", TextArea).text)
 
     @work(exclusive=True, group="form")
@@ -209,12 +254,8 @@ class NoteFormScreen(BackScreen):
         self.dismiss()
 
 
-class CardFormScreen(BackScreen):
+class CardFormScreen(FormScreen):
     """Form for creating a card item in a vault."""
-
-    BINDINGS = [
-        Binding("ctrl+s", "submit", "Save"),
-    ]
 
     def __init__(self, vault: Vault) -> None:
         super().__init__()
@@ -224,17 +265,38 @@ class CardFormScreen(BackScreen):
         with VerticalScroll(id="form-box"):
             yield Static("New card item", id="form-title")
             yield Label("Title")
-            yield Input(id="c-title")
+            yield Input(id="c-title", validators=[required("Title is required")])
             yield Label("Cardholder name")
             yield Input(id="c-cardholder")
             yield Label("Card number")
-            yield Input(id="c-number")
+            yield Input(
+                id="c-number",
+                validators=[
+                    optional_pattern(
+                        r"[\d ]+", "Card number must be digits"
+                    )
+                ],
+            )
             yield Label("Expiry (YYYY-MM)")
-            yield Input(id="c-expiry", placeholder="2029-12")
+            yield Input(
+                id="c-expiry",
+                placeholder="2029-12",
+                validators=[
+                    optional_pattern(r"\d{4}-\d{2}", "Use the YYYY-MM format")
+                ],
+            )
             yield Label("CVV")
-            yield Input(id="c-cvv", password=True)
+            yield Input(
+                id="c-cvv",
+                password=True,
+                validators=[optional_pattern(r"\d{3,4}", "CVV must be 3-4 digits")],
+            )
             yield Label("PIN")
-            yield Input(id="c-pin", password=True)
+            yield Input(
+                id="c-pin",
+                password=True,
+                validators=[optional_pattern(r"\d{3,12}", "PIN must be digits")],
+            )
             yield Label("Note")
             yield Input(id="c-note")
             yield Button("Save", id="form-save", variant="primary")
@@ -258,11 +320,11 @@ class CardFormScreen(BackScreen):
             self.action_submit()
 
     def action_submit(self) -> None:
-        values = self._gather()
-        if not values["title"]:
-            self.notify("Title is required.", severity="warning")
+        if not self._check(
+            "#c-title", "#c-number", "#c-expiry", "#c-cvv", "#c-pin"
+        ):
             return
-        self.create_item(values)
+        self.create_item(self._gather())
 
     @work(exclusive=True, group="form")
     async def create_item(self, values: dict[str, str]) -> None:
