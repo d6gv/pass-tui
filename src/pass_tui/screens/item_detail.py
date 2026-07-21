@@ -13,8 +13,17 @@ from textual.coordinate import Coordinate
 from textual.timer import Timer
 from textual.widgets import DataTable, ProgressBar, Static
 
-from pass_tui.cli import Item, ItemDetail, ItemField, PassCliError, Vault, get_item
+from pass_tui.cli import (
+    Item,
+    ItemDetail,
+    ItemField,
+    PassCliError,
+    Vault,
+    delete_item,
+    get_item,
+)
 from pass_tui.screens.base import BackScreen
+from pass_tui.screens.confirm import ConfirmDeleteModal
 from pass_tui.screens.forms import LoginFormScreen
 
 if TYPE_CHECKING:
@@ -34,6 +43,7 @@ class ItemDetailScreen(BackScreen):
         Binding("v", "toggle_reveal", "Reveal/hide"),
         Binding("c", "copy", "Copy field"),
         Binding("e", "edit", "Edit"),
+        Binding("d", "delete", "Delete"),
     ]
 
     def __init__(self, item: Item, vault: Vault) -> None:
@@ -188,6 +198,36 @@ class ItemDetailScreen(BackScreen):
         self.app.push_screen(
             LoginFormScreen(self._vault, item=self._item, initial=initial)
         )
+
+    def action_delete(self) -> None:
+        """Ask for confirmation, then delete the item."""
+        share_id = self._vault.share_id
+        item_id = self._item.item_id
+        if not share_id or not item_id:
+            self.notify(
+                "Cannot delete: missing item or vault id.", severity="warning"
+            )
+            return
+
+        title = self._detail.title if self._detail else self._item.display_title
+
+        def on_confirmed(confirmed: bool | None) -> None:
+            if confirmed:
+                self.perform_delete(share_id, item_id)
+
+        self.app.push_screen(ConfirmDeleteModal(title), on_confirmed)
+
+    @work(exclusive=True, group="mutation")
+    async def perform_delete(self, share_id: str, item_id: str) -> None:
+        try:
+            await delete_item(share_id=share_id, item_id=item_id)
+        except PassCliError as exc:
+            cast("PassTuiApp", self.app).show_error(
+                str(exc), title="Could not delete item"
+            )
+            return
+        self.notify("Item deleted.", title="pass-tui")
+        self.dismiss()
 
     def action_toggle_reveal(self) -> None:
         """Toggle masking of sensitive fields, preserving the cursor."""

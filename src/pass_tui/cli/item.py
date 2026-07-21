@@ -284,6 +284,20 @@ async def update_item_fields(
     await run_pass_cli_checked(*args)
 
 
+async def delete_item(*, share_id: str, item_id: str) -> None:
+    """Delete an item via ``pass-cli item delete``.
+
+    Both the share id and the item id are required by pass-cli, and the
+    deletion is permanent.
+
+    Raises:
+        PassCliError: if the command fails.
+    """
+    await run_pass_cli_checked(
+        "item", "delete", "--share-id", share_id, "--item-id", item_id
+    )
+
+
 def _looks_sensitive(name: str) -> bool:
     return bool(_SENSITIVE_NAME.search(name))
 
