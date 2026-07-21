@@ -43,6 +43,7 @@ class ItemDetailScreen(BackScreen):
     BINDINGS = [
         Binding("v", "toggle_reveal", "Reveal/hide"),
         Binding("c", "copy", "Copy field"),
+        Binding("t", "copy_totp", "Copy TOTP"),
         Binding("e", "edit", "Edit"),
         Binding("d", "delete", "Delete"),
     ]
@@ -138,7 +139,23 @@ class ItemDetailScreen(BackScreen):
             return self._has_secrets()
         if action == "copy":
             return self._selected_field() is not None
+        if action == "copy_totp":
+            return self.query_one("#detail-totp", TotpView).primary_code() is not None
         return True
+
+    def on_totp_view_changed(self, event: TotpView.Changed) -> None:
+        # The "Copy TOTP" binding appears once a code is available.
+        self.refresh_bindings()
+
+    def action_copy_totp(self) -> None:
+        """Copy the current TOTP code and start the clipboard countdown."""
+        code = self.query_one("#detail-totp", TotpView).primary_code()
+        if code is None:
+            self.notify("This item has no TOTP code.", severity="warning")
+            return
+        app = cast("PassTuiApp", self.app)
+        if app.copy_with_autoclear(code, label="TOTP code"):
+            self._start_countdown(float(app.clipboard_clear_seconds))
 
     def _selected_field(self) -> ItemField | None:
         if self._detail is None or not self._detail.fields:

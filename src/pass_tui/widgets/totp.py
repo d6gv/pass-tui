@@ -7,6 +7,7 @@ import time
 
 from textual import work
 from textual.app import ComposeResult
+from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import ProgressBar, Static
 
@@ -42,6 +43,9 @@ class TotpView(Widget):
         width: 20;
     }
     """
+
+    class Changed(Message):
+        """Posted after the set of codes changes (including first load)."""
 
     def __init__(
         self,
@@ -101,6 +105,7 @@ class TotpView(Widget):
         self._codes = codes
         self.display = bool(codes)
         self.query_one(".totp-codes", Static).update(self._format_codes())
+        self.post_message(self.Changed())
 
     def _format_codes(self) -> str:
         if not self._codes:
