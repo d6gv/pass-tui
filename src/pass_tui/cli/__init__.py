@@ -25,6 +25,12 @@ from pass_tui.cli.runner import (
     run_pass_cli_checked,
     run_pass_cli_interactive,
 )
+from pass_tui.cli.ssh_agent import (
+    SshLoadSummary,
+    parse_ssh_load_summary,
+    ssh_agent_debug,
+    ssh_agent_load,
+)
 from pass_tui.cli.totp import (
     TOTP_PERIOD,
     get_totp_codes,
@@ -41,6 +47,7 @@ __all__ = [
     "ItemField",
     "PassCliError",
     "SessionInfo",
+    "SshLoadSummary",
     "Vault",
     "build_create_card_args",
     "build_create_login_args",
@@ -57,8 +64,11 @@ __all__ = [
     "list_vaults",
     "logout",
     "parse_item_detail",
+    "parse_ssh_load_summary",
     "period_index",
     "seconds_remaining",
+    "ssh_agent_debug",
+    "ssh_agent_load",
     "update_item_fields",
     "run_pass_cli",
     "run_pass_cli_checked",
