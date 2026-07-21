@@ -18,6 +18,7 @@ from pass_tui.screens.forms import (
 )
 from pass_tui.screens.item_detail import ItemDetailScreen
 from pass_tui.screens.new_item import NewItemModal
+from pass_tui.screens.ssh import SshScreen
 
 if TYPE_CHECKING:
     from pass_tui.app import PassTuiApp
@@ -42,6 +43,7 @@ class ItemListScreen(BackScreen):
     BINDINGS = [
         Binding("slash", "focus_filter", "Filter"),
         Binding("n", "new", "New"),
+        Binding("k", "ssh_keys", "SSH keys"),
         Binding("r", "refresh", "Refresh"),
     ]
 
@@ -105,6 +107,9 @@ class ItemListScreen(BackScreen):
 
     def action_refresh(self) -> None:
         self.load_items()
+
+    def action_ssh_keys(self) -> None:
+        self.app.push_screen(SshScreen(self._vault))
 
     def action_new(self) -> None:
         def on_kind(kind: str | None) -> None:

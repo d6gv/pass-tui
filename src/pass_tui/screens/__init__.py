@@ -13,6 +13,7 @@ from pass_tui.screens.item_list import ItemListScreen
 from pass_tui.screens.login import LoginScreen
 from pass_tui.screens.new_item import NewItemModal
 from pass_tui.screens.settings import SettingsScreen
+from pass_tui.screens.ssh import SshScreen
 from pass_tui.screens.totp_dashboard import TotpDashboardScreen
 from pass_tui.screens.vault_list import VaultListScreen
 
@@ -28,6 +29,7 @@ __all__ = [
     "NewItemModal",
     "NoteFormScreen",
     "SettingsScreen",
+    "SshScreen",
     "TotpDashboardScreen",
     "VaultListScreen",
 ]
