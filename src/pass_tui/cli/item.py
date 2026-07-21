@@ -330,6 +330,77 @@ async def create_card_item(
     await run_pass_cli_checked(*args)
 
 
+#: Key types accepted by ``item create ssh-key generate``.
+SSH_KEY_TYPES = ("ed25519", "rsa2048", "rsa4096")
+
+
+def build_create_ssh_key_generate_args(
+    *,
+    title: str,
+    key_type: str = "ed25519",
+    comment: str = "",
+    vault_name: str | None = None,
+    share_id: str | None = None,
+) -> list[str]:
+    """Build the argv for ``pass-cli item create ssh-key generate``."""
+    args = ["item", "create", "ssh-key", "generate", "--title", title]
+    args += ["--key-type", key_type]
+    if comment:
+        args += ["--comment", comment]
+    args += _vault_args(vault_name, share_id)
+    return args
+
+
+async def create_ssh_key_generate(
+    *,
+    title: str,
+    key_type: str = "ed25519",
+    comment: str = "",
+    vault_name: str | None = None,
+    share_id: str | None = None,
+) -> None:
+    """Generate and store a new SSH key. Raises PassCliError on failure."""
+    args = build_create_ssh_key_generate_args(
+        title=title,
+        key_type=key_type,
+        comment=comment,
+        vault_name=vault_name,
+        share_id=share_id,
+    )
+    await run_pass_cli_checked(*args)
+
+
+def build_create_ssh_key_import_args(
+    *,
+    title: str,
+    private_key_path: str,
+    vault_name: str | None = None,
+    share_id: str | None = None,
+) -> list[str]:
+    """Build the argv for ``pass-cli item create ssh-key import``."""
+    args = ["item", "create", "ssh-key", "import", "--title", title]
+    args += ["--from-private-key", private_key_path]
+    args += _vault_args(vault_name, share_id)
+    return args
+
+
+async def create_ssh_key_import(
+    *,
+    title: str,
+    private_key_path: str,
+    vault_name: str | None = None,
+    share_id: str | None = None,
+) -> None:
+    """Import an SSH private key from a file. Raises PassCliError on failure."""
+    args = build_create_ssh_key_import_args(
+        title=title,
+        private_key_path=private_key_path,
+        vault_name=vault_name,
+        share_id=share_id,
+    )
+    await run_pass_cli_checked(*args)
+
+
 def build_update_args(
     *,
     fields: dict[str, str],

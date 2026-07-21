@@ -10,15 +10,18 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import VerticalScroll
 from textual.validation import Function, Validator
-from textual.widgets import Button, Input, Label, Static, TextArea
+from textual.widgets import Button, Input, Label, Select, Static, TextArea
 
 from pass_tui.cli import (
+    SSH_KEY_TYPES,
     Item,
     PassCliError,
     Vault,
     create_card_item,
     create_login_item,
     create_note_item,
+    create_ssh_key_generate,
+    create_ssh_key_import,
     update_item_fields,
 )
 from pass_tui.screens.base import BackScreen
@@ -346,4 +349,86 @@ class CardFormScreen(FormScreen):
             )
             return
         self.notify("Card item created.", title="pass-tui")
+        self.dismiss()
+
+
+class SshKeyFormScreen(FormScreen):
+    """Form for generating or importing an SSH key into a vault.
+
+    If a private-key file path is given, the key is imported; otherwise a new
+    key is generated with the chosen type. Passphrase-protected keys are not
+    handled here, since ``--password`` prompts interactively.
+    """
+
+    def __init__(self, vault: Vault) -> None:
+        super().__init__()
+        self._vault = vault
+
+    def compose_content(self) -> ComposeResult:
+        with VerticalScroll(id="form-box"):
+            yield Static("New SSH key", id="form-title")
+            yield Label("Title")
+            yield Input(id="k-title", validators=[required("Title is required")])
+            yield Label("Key type (used when generating)")
+            yield Select(
+                [(key_type, key_type) for key_type in SSH_KEY_TYPES],
+                value=SSH_KEY_TYPES[0],
+                allow_blank=False,
+                id="k-type",
+            )
+            yield Label("Comment (optional)")
+            yield Input(id="k-comment")
+            yield Label("Import from private key file (leave blank to generate)")
+            yield Input(id="k-import", placeholder="/path/to/id_ed25519")
+            yield Button("Save", id="form-save", variant="primary")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "form-save":
+            self.action_submit()
+
+    def action_submit(self) -> None:
+        if not self._check("#k-title"):
+            return
+        title = self.query_one("#k-title", Input).value.strip()
+        import_path = self.query_one("#k-import", Input).value.strip()
+        if import_path:
+            self.import_key(title, import_path)
+        else:
+            key_type = str(self.query_one("#k-type", Select).value)
+            comment = self.query_one("#k-comment", Input).value
+            self.generate_key(title, key_type, comment)
+
+    @work(exclusive=True, group="form")
+    async def generate_key(self, title: str, key_type: str, comment: str) -> None:
+        try:
+            await create_ssh_key_generate(
+                title=title,
+                key_type=key_type,
+                comment=comment,
+                vault_name=self._vault.name,
+                share_id=self._vault.share_id,
+            )
+        except PassCliError as exc:
+            cast("PassTuiApp", self.app).show_error(
+                str(exc), title="Could not generate key"
+            )
+            return
+        self.notify("SSH key generated.", title="pass-tui")
+        self.dismiss()
+
+    @work(exclusive=True, group="form")
+    async def import_key(self, title: str, private_key_path: str) -> None:
+        try:
+            await create_ssh_key_import(
+                title=title,
+                private_key_path=private_key_path,
+                vault_name=self._vault.name,
+                share_id=self._vault.share_id,
+            )
+        except PassCliError as exc:
+            cast("PassTuiApp", self.app).show_error(
+                str(exc), title="Could not import key"
+            )
+            return
+        self.notify("SSH key imported.", title="pass-tui")
         self.dismiss()

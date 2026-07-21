@@ -18,6 +18,7 @@ from pass_tui.cli import (
     ssh_agent_load,
 )
 from pass_tui.screens.base import BackScreen
+from pass_tui.screens.forms import SshKeyFormScreen
 
 if TYPE_CHECKING:
     from pass_tui.app import PassTuiApp
@@ -40,6 +41,7 @@ class SshScreen(BackScreen):
     BINDINGS = [
         Binding("l", "load", "Load into agent"),
         Binding("d", "debug", "Debug"),
+        Binding("n", "new_key", "New key"),
         Binding("r", "refresh", "Refresh"),
     ]
 
@@ -62,6 +64,9 @@ class SshScreen(BackScreen):
 
     def action_refresh(self) -> None:
         self.load_keys()
+
+    def action_new_key(self) -> None:
+        self.app.push_screen(SshKeyFormScreen(self._vault))
 
     def action_load(self) -> None:
         self.load_into_agent()

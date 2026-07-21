@@ -6,6 +6,7 @@ from pass_tui.screens.forms import (
     CardFormScreen,
     LoginFormScreen,
     NoteFormScreen,
+    SshKeyFormScreen,
 )
 from pass_tui.screens.help import HelpScreen
 from pass_tui.screens.item_detail import ItemDetailScreen
@@ -29,6 +30,7 @@ __all__ = [
     "NewItemModal",
     "NoteFormScreen",
     "SettingsScreen",
+    "SshKeyFormScreen",
     "SshScreen",
     "TotpDashboardScreen",
     "VaultListScreen",
