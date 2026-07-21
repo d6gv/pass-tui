@@ -25,6 +25,7 @@ from pass_tui.cli import (
 from pass_tui.screens.base import BackScreen
 from pass_tui.screens.confirm import ConfirmDeleteModal
 from pass_tui.screens.forms import LoginFormScreen
+from pass_tui.widgets import TotpView
 
 if TYPE_CHECKING:
     from pass_tui.app import PassTuiApp
@@ -57,6 +58,14 @@ class ItemDetailScreen(BackScreen):
 
     def compose_content(self) -> ComposeResult:
         yield Static("Loading…", id="detail-title")
+        yield TotpView(
+            item_id=self._item.item_id,
+            item_title=self._item.title,
+            vault_name=self._vault.name,
+            share_id=self._vault.share_id,
+            label="TOTP",
+            id="detail-totp",
+        )
         yield DataTable(id="detail-table", cursor_type="row")
         yield Static("", id="detail-note")
         with Horizontal(id="clip-countdown"):

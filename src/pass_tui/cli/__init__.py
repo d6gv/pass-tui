@@ -25,10 +25,17 @@ from pass_tui.cli.runner import (
     run_pass_cli_checked,
     run_pass_cli_interactive,
 )
+from pass_tui.cli.totp import (
+    TOTP_PERIOD,
+    get_totp_codes,
+    period_index,
+    seconds_remaining,
+)
 from pass_tui.cli.vault import Vault, list_vaults
 
 __all__ = [
     "PASS_CLI_BINARY",
+    "TOTP_PERIOD",
     "Item",
     "ItemDetail",
     "ItemField",
@@ -45,10 +52,13 @@ __all__ = [
     "delete_item",
     "fetch_session",
     "get_item",
+    "get_totp_codes",
     "list_items",
     "list_vaults",
     "logout",
     "parse_item_detail",
+    "period_index",
+    "seconds_remaining",
     "update_item_fields",
     "run_pass_cli",
     "run_pass_cli_checked",
