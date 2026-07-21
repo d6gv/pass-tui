@@ -12,6 +12,7 @@ from textual.widgets import Button, Input, Label, Static
 
 from pass_tui.cli import PassCliError, Vault, create_login_item
 from pass_tui.screens.base import BackScreen
+from pass_tui.widgets import PasswordGenerator
 
 if TYPE_CHECKING:
     from pass_tui.app import PassTuiApp
@@ -37,6 +38,7 @@ class LoginFormScreen(BackScreen):
             yield Input(id="f-username")
             yield Label("Password")
             yield Input(id="f-password", password=True)
+            yield PasswordGenerator(id="f-password-generator")
             yield Label("URL")
             yield Input(id="f-url")
             yield Label("Note")
@@ -58,6 +60,11 @@ class LoginFormScreen(BackScreen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "form-save":
             self.action_submit()
+
+    def on_password_generator_generated(
+        self, event: PasswordGenerator.Generated
+    ) -> None:
+        self.query_one("#f-password", Input).value = event.password
 
     def action_submit(self) -> None:
         values = self._gather()
