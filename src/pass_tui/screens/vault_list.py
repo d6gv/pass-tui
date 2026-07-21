@@ -13,6 +13,7 @@ from pass_tui.cli import PassCliError, SessionInfo, Vault, list_vaults
 from pass_tui.screens.base import ChromeScreen
 from pass_tui.screens.item_list import ItemListScreen
 from pass_tui.screens.settings import SettingsScreen
+from pass_tui.screens.totp_dashboard import TotpDashboardScreen
 
 if TYPE_CHECKING:
     from pass_tui.app import PassTuiApp
@@ -23,6 +24,7 @@ class VaultListScreen(ChromeScreen):
 
     BINDINGS = [
         Binding("r", "refresh", "Refresh"),
+        Binding("t", "totp", "TOTP"),
         Binding("s", "settings", "Settings"),
         Binding("ctrl+l", "logout", "Log out"),
     ]
@@ -67,6 +69,9 @@ class VaultListScreen(ChromeScreen):
 
     def action_refresh(self) -> None:
         self.load_vaults()
+
+    def action_totp(self) -> None:
+        self.app.push_screen(TotpDashboardScreen())
 
     def action_settings(self) -> None:
         self.app.push_screen(SettingsScreen())
