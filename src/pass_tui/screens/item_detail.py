@@ -15,6 +15,7 @@ from textual.widgets import DataTable, ProgressBar, Static
 
 from pass_tui.cli import Item, ItemDetail, ItemField, PassCliError, Vault, get_item
 from pass_tui.screens.base import BackScreen
+from pass_tui.screens.forms import LoginFormScreen
 
 if TYPE_CHECKING:
     from pass_tui.app import PassTuiApp
@@ -32,6 +33,7 @@ class ItemDetailScreen(BackScreen):
     BINDINGS = [
         Binding("v", "toggle_reveal", "Reveal/hide"),
         Binding("c", "copy", "Copy field"),
+        Binding("e", "edit", "Edit"),
     ]
 
     def __init__(self, item: Item, vault: Vault) -> None:
@@ -55,6 +57,10 @@ class ItemDetailScreen(BackScreen):
         table = self.query_one(DataTable)
         table.add_columns("Field", "Value")
         self.query_one("#clip-countdown").display = False
+
+    def on_screen_resume(self) -> None:
+        # Loads on first appearance and reloads after returning from the edit
+        # form, so updated values are reflected without a manual refresh.
         self.load_detail()
 
     @work(exclusive=True, group="detail")
@@ -154,6 +160,34 @@ class ItemDetailScreen(BackScreen):
             self._progress_timer.stop()
             self._progress_timer = None
         self.query_one("#clip-countdown").display = False
+
+    def _field_value(self, label: str) -> str:
+        if self._detail is None:
+            return ""
+        for field in self._detail.fields:
+            if field.label == label:
+                return field.value
+        return ""
+
+    def action_edit(self) -> None:
+        """Open the edit form for this item (login items only for now)."""
+        if self._detail is None:
+            return
+        if self._item.type_label != "login":
+            self.notify(
+                "Editing this item type is not supported yet.",
+                severity="warning",
+            )
+            return
+        initial = {
+            "title": self._detail.title,
+            "username": self._field_value("Username"),
+            "url": self._field_value("URLs"),
+            "note": self._detail.note or "",
+        }
+        self.app.push_screen(
+            LoginFormScreen(self._vault, item=self._item, initial=initial)
+        )
 
     def action_toggle_reveal(self) -> None:
         """Toggle masking of sensitive fields, preserving the cursor."""

@@ -234,6 +234,56 @@ async def create_login_item(
     await run_pass_cli_checked(*args)
 
 
+def build_update_args(
+    *,
+    fields: dict[str, str],
+    item_id: str | None = None,
+    item_title: str | None = None,
+    vault_name: str | None = None,
+    share_id: str | None = None,
+) -> list[str]:
+    """Build the argv for ``pass-cli item update``.
+
+    Each entry in ``fields`` becomes a repeated ``--field name=value``.
+    """
+    args = ["item", "update"]
+    if item_id:
+        args += ["--item-id", item_id]
+    elif item_title:
+        args += ["--item-title", item_title]
+    args += _vault_args(vault_name, share_id)
+    for name, value in fields.items():
+        args += ["--field", f"{name}={value}"]
+    return args
+
+
+async def update_item_fields(
+    *,
+    fields: dict[str, str],
+    item_id: str | None = None,
+    item_title: str | None = None,
+    vault_name: str | None = None,
+    share_id: str | None = None,
+) -> None:
+    """Update fields of an item via ``pass-cli item update``.
+
+    Does nothing when ``fields`` is empty.
+
+    Raises:
+        PassCliError: if the command fails.
+    """
+    if not fields:
+        return
+    args = build_update_args(
+        fields=fields,
+        item_id=item_id,
+        item_title=item_title,
+        vault_name=vault_name,
+        share_id=share_id,
+    )
+    await run_pass_cli_checked(*args)
+
+
 def _looks_sensitive(name: str) -> bool:
     return bool(_SENSITIVE_NAME.search(name))
 

@@ -6,10 +6,12 @@ from pass_tui.cli.item import (
     ItemDetail,
     ItemField,
     build_create_login_args,
+    build_update_args,
     create_login_item,
     get_item,
     list_items,
     parse_item_detail,
+    update_item_fields,
 )
 from pass_tui.cli.runner import (
     PASS_CLI_BINARY,
@@ -29,6 +31,7 @@ __all__ = [
     "SessionInfo",
     "Vault",
     "build_create_login_args",
+    "build_update_args",
     "create_login_item",
     "fetch_session",
     "get_item",
@@ -36,6 +39,7 @@ __all__ = [
     "list_vaults",
     "logout",
     "parse_item_detail",
+    "update_item_fields",
     "run_pass_cli",
     "run_pass_cli_checked",
     "run_pass_cli_interactive",
