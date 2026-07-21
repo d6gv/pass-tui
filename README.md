@@ -44,21 +44,35 @@ uv run pass-tui
 ```
 
 On startup pass-tui checks for an active `pass-cli` session. If there is
-none, it shows the login screen; otherwise it lands on the vault list.
+none, it shows the login screen; otherwise it lands on the vault list. From
+there you can browse vaults, filter and open items, view an item's fields
+(secrets masked), copy a field to the clipboard, and create, edit, or delete
+items.
 
 Keyboard shortcuts (also shown in the footer, and under `?`):
 
-| Key      | Where       | Action                          |
-| -------- | ----------- | ------------------------------- |
-| `l`      | Login       | Log in (hands off to pass-cli)  |
-| `↑` `↓`  | Vault list  | Move between vaults             |
-| `enter`  | Vault list  | Open the selected vault         |
-| `r`      | Vault list  | Refresh the vault list          |
-| `s`      | Vault list  | Open settings                   |
-| `ctrl+l` | Vault list  | Log out                         |
-| `esc`    | Pushed view | Go back                         |
-| `?`      | Anywhere    | Toggle the help overlay         |
-| `ctrl+c` | Anywhere    | Quit                            |
+| Key      | Where        | Action                                   |
+| -------- | ------------ | ---------------------------------------- |
+| `l`      | Login        | Log in (hands off to pass-cli)           |
+| `↑` `↓`  | Lists        | Move between rows                         |
+| `enter`  | Vault list   | Open the selected vault                  |
+| `enter`  | Item list    | Open the selected item                   |
+| `/`      | Item list    | Focus the live title filter              |
+| `n`      | Item list    | New item (login / note / card)           |
+| `r`      | Lists        | Reload from pass-cli                      |
+| `v`      | Item detail  | Reveal / hide sensitive fields           |
+| `c`      | Item detail  | Copy the selected field (auto-clears)    |
+| `e`      | Item detail  | Edit the item                            |
+| `d`      | Item detail  | Delete the item (with confirmation)      |
+| `ctrl+s` | Forms        | Save                                     |
+| `s`      | Vault list   | Open settings                            |
+| `ctrl+l` | Vault list   | Log out                                  |
+| `esc`    | Pushed view  | Go back / cancel                         |
+| `?`      | Anywhere     | Toggle the help overlay                  |
+| `ctrl+c` | Anywhere     | Quit                                     |
+
+Copied secrets are cleared from the clipboard automatically after a
+configurable timeout, with a countdown shown in the item detail view.
 
 A pass-cli failure (e.g. no network) is shown in a dismissable error modal
 rather than crashing the app.
@@ -90,26 +104,31 @@ uv run mypy .        # type-check (strict)
 
 ```
 src/pass_tui/
-  app.py              # main Textual App: session routing and navigation
+  app.py              # main Textual App: session routing, clipboard, navigation
+  password.py         # client-side password generation (secrets)
   cli/                # invokes pass-cli and parses its JSON output
     runner.py         # run_pass_cli(*args) -> dict | list, raises PassCliError
     auth.py           # SessionInfo, fetch_session(), logout()
     vault.py          # Vault model and list_vaults()
+    item.py           # Item/ItemDetail models, list/get/create/update/delete
   screens/            # Textual screens
     base.py           # shared header/footer chrome (ChromeScreen, BackScreen)
     login.py          # login screen
     vault_list.py     # vault list (landing screen once logged in)
-    item_list.py      # items in a vault (skeleton)
-    item_detail.py    # single item fields (skeleton)
-    forms.py          # create/edit form (skeleton)
+    item_list.py      # items in a vault, with live filter
+    item_detail.py    # item fields, masking, copy, edit/delete entry points
+    forms.py          # login/note/card create & edit forms + validation
+    new_item.py       # "which item type?" chooser modal
+    confirm.py        # double-confirmation delete modal
     settings.py       # settings (skeleton)
     help.py           # help overlay (?)
     error.py          # non-fatal error modal
+  widgets/            # reusable custom widgets
+    password_generator.py
 tests/                # pytest + Textual Pilot; pass-cli is always mocked
 ```
 
-`widgets/` (reusable custom widgets) and `config.py` (config file handling)
-will be added in later phases.
+`config.py` (config file handling) will be added in a later phase.
 
 ## License
 
