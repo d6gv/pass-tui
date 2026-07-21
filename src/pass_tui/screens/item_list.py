@@ -11,6 +11,7 @@ from textual.widgets import DataTable, Input, Static
 
 from pass_tui.cli import Item, PassCliError, Vault, list_items
 from pass_tui.screens.base import BackScreen
+from pass_tui.screens.forms import LoginFormScreen
 from pass_tui.screens.item_detail import ItemDetailScreen
 
 if TYPE_CHECKING:
@@ -35,6 +36,7 @@ class ItemListScreen(BackScreen):
 
     BINDINGS = [
         Binding("slash", "focus_filter", "Filter"),
+        Binding("n", "new", "New"),
         Binding("r", "refresh", "Refresh"),
     ]
 
@@ -53,6 +55,10 @@ class ItemListScreen(BackScreen):
         table = self.query_one(DataTable)
         table.add_columns("", "Title", "Type")
         table.focus()
+
+    def on_screen_resume(self) -> None:
+        # Loads on first appearance and reloads when returning from a form,
+        # so created/edited/deleted items are reflected without a manual refresh.
         self.load_items()
 
     @work(exclusive=True, group="items")
@@ -94,6 +100,9 @@ class ItemListScreen(BackScreen):
 
     def action_refresh(self) -> None:
         self.load_items()
+
+    def action_new(self) -> None:
+        self.app.push_screen(LoginFormScreen(self._vault))
 
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id == "item-filter":

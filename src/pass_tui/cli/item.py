@@ -21,7 +21,7 @@ from typing import Any
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
-from pass_tui.cli.runner import PassCliError, run_pass_cli
+from pass_tui.cli.runner import PassCliError, run_pass_cli, run_pass_cli_checked
 
 #: Icon shown per normalized item type. Falls back to ``_DEFAULT_ICON``.
 _TYPE_ICONS = {
@@ -164,6 +164,74 @@ async def get_item(
     if not isinstance(data, dict):
         raise PassCliError("`pass-cli item get` did not return a JSON object.")
     return parse_item_detail(data)
+
+
+def _vault_args(vault_name: str | None, share_id: str | None) -> list[str]:
+    """Vault identification args, preferring the unambiguous share id."""
+    if share_id:
+        return ["--share-id", share_id]
+    if vault_name:
+        return ["--vault-name", vault_name]
+    return []
+
+
+def build_create_login_args(
+    *,
+    title: str,
+    username: str = "",
+    email: str = "",
+    password: str = "",
+    url: str = "",
+    note: str = "",
+    vault_name: str | None = None,
+    share_id: str | None = None,
+) -> list[str]:
+    """Build the argv for ``pass-cli item create login``.
+
+    Only non-empty optional fields are included. Note: pass-cli's create uses
+    named flags (``--username`` etc.), not ``--field``.
+    """
+    args = ["item", "create", "login", "--title", title]
+    for flag, value in (
+        ("--username", username),
+        ("--email", email),
+        ("--password", password),
+        ("--url", url),
+        ("--note", note),
+    ):
+        if value:
+            args += [flag, value]
+    args += _vault_args(vault_name, share_id)
+    return args
+
+
+async def create_login_item(
+    *,
+    title: str,
+    username: str = "",
+    email: str = "",
+    password: str = "",
+    url: str = "",
+    note: str = "",
+    vault_name: str | None = None,
+    share_id: str | None = None,
+) -> None:
+    """Create a login item via ``pass-cli item create login``.
+
+    Raises:
+        PassCliError: if the command fails.
+    """
+    args = build_create_login_args(
+        title=title,
+        username=username,
+        email=email,
+        password=password,
+        url=url,
+        note=note,
+        vault_name=vault_name,
+        share_id=share_id,
+    )
+    await run_pass_cli_checked(*args)
 
 
 def _looks_sensitive(name: str) -> bool:
